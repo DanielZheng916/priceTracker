@@ -54,9 +54,10 @@ Environment variables:
 - `DB_PATH`: SQLite file path. Default: `./price-tracker.db`
 - `POLL_INTERVAL_HOURS`: Poll interval. Default: `6`
 - `BROWSER_HEADLESS`: Set to `false` for Total Wine (recommended). Default: `true`
-- `TRACKED_PRODUCTS_JSON`: Optional JSON array of products
 
-Product schema:
+### Tracked Products
+
+Edit `products.json` in the project root to add, remove, or change tracked products:
 
 ```json
 [

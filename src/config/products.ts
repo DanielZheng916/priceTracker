@@ -1,32 +1,21 @@
+import { readFileSync } from "fs";
+import { resolve } from "path";
 import { TrackedProduct } from "../sources/types";
 
-const defaultProducts: TrackedProduct[] = [
-  {
-    id: "ardbeg-uigeadail",
-    name: "Ardbeg Uigeadail",
-    source: "total-wine",
-    url: "https://www.totalwine.com/spirits/scotch/single-malt/ardbeg-uigeadail-single-malt-scotch/p/36672750",
-    currency: "USD"
-  },
-  {
-    id: "astro-bot-ps5",
-    name: "ASTRO BOT (PS5)",
-    source: "playstation",
-    url: "https://www.playstation.com/en-us/games/astro-bot/",
-    currency: "USD"
-  }
-];
+const CONFIG_PATH = resolve(process.cwd(), "products.json");
 
 export function loadTrackedProducts(): TrackedProduct[] {
-  const inlineProducts = process.env.TRACKED_PRODUCTS_JSON;
-  if (!inlineProducts) {
-    return defaultProducts;
-  }
-
   try {
-    const parsed = JSON.parse(inlineProducts) as TrackedProduct[];
-    return parsed;
+    const raw = readFileSync(CONFIG_PATH, "utf-8");
+    const products = JSON.parse(raw) as TrackedProduct[];
+    if (!Array.isArray(products) || products.length === 0) {
+      throw new Error("products.json must be a non-empty JSON array");
+    }
+    return products;
   } catch (error) {
-    throw new Error(`Invalid TRACKED_PRODUCTS_JSON: ${(error as Error).message}`);
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new Error(`Config file not found: ${CONFIG_PATH}`);
+    }
+    throw new Error(`Failed to load products.json: ${(error as Error).message}`);
   }
 }
