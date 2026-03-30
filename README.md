@@ -1,19 +1,23 @@
 # Price Tracker App
 
-Track price history for products on Total Wine and PlayStation, then report:
+Track product price history from Total Wine and PlayStation, then report:
 
 - Initial price
 - Current price
 - Price trend (up/down/flat)
 
-## Features
+## What This App Does
 
-- Node.js + TypeScript CLI app
-- Total Wine: headless Chrome via Puppeteer with stealth plugin (handles PerimeterX bot protection)
-- PlayStation: direct HTTP with JSON-LD extraction
-- SQLite persistence for historical snapshots
-- Scheduled polling and one-off capture mode
-- Trend analytics with absolute and percent change
+- Node.js + TypeScript price tracker
+- SQLite storage for historical snapshots
+- One-off polling and scheduled polling
+- CLI report with absolute and percent change
+- Dashboard UI with interactive charts
+
+## Supported Sources
+
+- `total-wine`: Puppeteer + stealth plugin (PerimeterX-aware scraping)
+- `playstation`: direct HTTP + JSON-LD extraction
 
 ## Quick Start
 
@@ -23,42 +27,50 @@ Track price history for products on Total Wine and PlayStation, then report:
 npm install --legacy-peer-deps
 ```
 
-2. (Optional) configure env vars:
+2. Optionally copy environment defaults:
 
 ```bash
 cp .env.example .env
 ```
 
-3. Capture a single snapshot:
+3. Capture one snapshot:
 
 ```bash
 BROWSER_HEADLESS=false npm run run-once
 ```
 
-4. View report:
+4. Print report:
 
 ```bash
 npm run report
 ```
 
-5. Start scheduler (runs immediately, then every `POLL_INTERVAL_HOURS`):
+5. Start scheduler (runs once immediately, then every `POLL_INTERVAL_HOURS`):
 
 ```bash
 BROWSER_HEADLESS=false npm run poll
 ```
 
+## Commands
+
+- `npm run run-once`: poll one time and exit
+- `npm run poll`: poll immediately, then continue on interval
+- `npm run report`: print initial/current/trend data
+- `npm run dashboard`: run web UI at `http://localhost:3000`
+- `npm run test`: run unit tests
+
 ## Configuration
 
-Environment variables:
+### Environment Variables
 
-- `DB_PATH`: SQLite file path. Default: `./price-tracker.db`
-- `POLL_INTERVAL_HOURS`: Poll interval. Default: `6`
-- `BROWSER_HEADLESS`: Set to `false` for Total Wine (recommended). Default: `true`
-- `CHROME_PROFILE`: Set to `system` to use your real Chrome profile (best for bypassing bot detection; requires Chrome to be closed). If unset, uses a dedicated `.chrome-profile/` directory.
+- `DB_PATH`: SQLite file path (default: `./price-tracker.db`)
+- `POLL_INTERVAL_HOURS`: poll interval in hours (default: `6`)
+- `BROWSER_HEADLESS`: set `false` for Total Wine reliability (default: `true`)
+- `CHROME_PROFILE`: set `system` to use your local Chrome profile (Chrome must be closed); otherwise uses `.chrome-profile/`
 
 ### Tracked Products
 
-Edit `products.json` in the project root to add, remove, or change tracked products:
+Edit root-level `products.json` to add, remove, or update tracked products:
 
 ```json
 [
@@ -74,30 +86,26 @@ Edit `products.json` in the project root to add, remove, or change tracked produ
 
 `source` must be one of:
 
-- `total-wine` (uses Puppeteer headless Chrome)
-- `playstation` (uses direct HTTP)
-
-## Commands
-
-- `npm run run-once`: poll one time and exit
-- `npm run poll`: poll immediately and then on a recurring interval
-- `npm run report`: print initial/current/trend data
-- `npm run dashboard`: open a web UI at http://localhost:3000 with interactive price charts
-- `npm run test`: run unit tests
+- `total-wine`
+- `playstation`
 
 ## Total Wine Bot Protection
 
-Total Wine uses PerimeterX bot protection. The app handles this by:
+Total Wine uses PerimeterX protection. This app mitigates it by:
 
-1. Using `puppeteer-extra-plugin-stealth` to mask browser automation signals
-2. Removing the `--enable-automation` flag and patching `navigator.webdriver`
+1. Using `puppeteer-extra-plugin-stealth`
+2. Removing automation signals (for example `--enable-automation`, `navigator.webdriver`)
 3. Attempting to auto-solve the "Press & Hold" challenge
-4. In non-headless mode (`BROWSER_HEADLESS=false`), if auto-solve fails, giving you 60 seconds to solve it manually in the opened browser window
+4. Allowing manual solve time in non-headless mode if auto-solve fails
 
-For best results, always run with `BROWSER_HEADLESS=false`.
+Best reliability is with:
+
+```bash
+BROWSER_HEADLESS=false
+```
 
 ## Notes
 
-- Site HTML can change, so selectors may need updates over time.
-- Polling uses graceful per-product failure handling; one failure does not abort other products.
-- Total Wine prices vary by store location; the price captured depends on the default store for your IP.
+- Selectors may require updates if source site markup changes.
+- Product failures are isolated; one failed scrape does not stop others.
+- Total Wine price can vary by store/location and may depend on your detected region.
