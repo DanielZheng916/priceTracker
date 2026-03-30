@@ -1,0 +1,30 @@
+{
+  "name": "price-tracker",
+  "version": "1.0.0",
+  "description": "Track Total Wine and PlayStation product prices over time.",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "poll": "ts-node src/index.ts poll",
+    "run-once": "ts-node src/index.ts run-once",
+    "report": "ts-node src/index.ts report",
+    "test": "jest"
+  },
+  "dependencies": {
+    "axios": "^1.9.0",
+    "cheerio": "1.0.0-rc.12",
+    "puppeteer": "^19.11.1",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "sql.js": "^1.13.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.14.1",
+    "@types/sql.js": "^1.4.9",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.6",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.2"
+  }
+}
