@@ -54,6 +54,7 @@ Environment variables:
 - `DB_PATH`: SQLite file path. Default: `./price-tracker.db`
 - `POLL_INTERVAL_HOURS`: Poll interval. Default: `6`
 - `BROWSER_HEADLESS`: Set to `false` for Total Wine (recommended). Default: `true`
+- `CHROME_PROFILE`: Set to `system` to use your real Chrome profile (best for bypassing bot detection; requires Chrome to be closed). If unset, uses a dedicated `.chrome-profile/` directory.
 
 ### Tracked Products
 

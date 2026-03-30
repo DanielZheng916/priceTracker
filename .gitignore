@@ -3,3 +3,5 @@ dist/
 .env
 products.json
 *.db
+.chrome-profile/
+cron.log
