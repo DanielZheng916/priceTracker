@@ -8,11 +8,13 @@
     "poll": "ts-node src/index.ts poll",
     "run-once": "ts-node src/index.ts run-once",
     "report": "ts-node src/index.ts report",
+    "dashboard": "ts-node src/web/server.ts",
     "test": "jest"
   },
   "dependencies": {
     "axios": "^1.9.0",
     "cheerio": "1.0.0-rc.12",
+    "dotenv": "^17.3.1",
     "puppeteer": "^19.11.1",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",

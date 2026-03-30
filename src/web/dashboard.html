@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Price Tracker Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --border: #2a2d3a;
+      --text: #e4e6ed;
+      --text-muted: #8b8fa3;
+      --accent: #6c5ce7;
+      --green: #00b894;
+      --red: #e17055;
+      --yellow: #fdcb6e;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    header p {
+      color: var(--text-muted);
+      margin-top: 0.35rem;
+      font-size: 0.9rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(520px, 1fr));
+      gap: 1.5rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: border-color 0.2s;
+    }
+
+    .card:hover { border-color: var(--accent); }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+    }
+
+    .card-header h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .card-header .source {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      background: var(--bg);
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .stats {
+      display: flex;
+      gap: 1.5rem;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+    }
+
+    .stat-value {
+      font-size: 1.15rem;
+      font-weight: 600;
+    }
+
+    .trend-up { color: var(--red); }
+    .trend-down { color: var(--green); }
+    .trend-flat { color: var(--yellow); }
+
+    .chart-wrap {
+      position: relative;
+      height: 220px;
+    }
+
+    .no-data {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 220px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .product-link {
+      display: inline-block;
+      margin-top: 0.75rem;
+      font-size: 0.8rem;
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .product-link:hover { text-decoration: underline; }
+
+    .loading {
+      text-align: center;
+      padding: 4rem;
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--text-muted);
+    }
+
+    .empty-state h2 { font-size: 1.2rem; margin-bottom: 0.5rem; color: var(--text); }
+
+    @media (max-width: 600px) {
+      body { padding: 1rem; }
+      .grid { grid-template-columns: 1fr; }
+      .chart-wrap { height: 180px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Price Tracker</h1>
+    <p>Historical price data with trend analysis</p>
+  </header>
+  <div id="app" class="loading">Loading dashboard...</div>
+
+  <script>
+    const app = document.getElementById("app");
+
+    function formatCurrency(value, currency) {
+      try {
+        return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(value);
+      } catch {
+        return `${currency} ${value.toFixed(2)}`;
+      }
+    }
+
+    function trendClass(direction) {
+      if (direction === "up") return "trend-up";
+      if (direction === "down") return "trend-down";
+      return "trend-flat";
+    }
+
+    function trendLabel(direction) {
+      if (direction === "up") return "\u2191 Up";
+      if (direction === "down") return "\u2193 Down";
+      return "\u2192 Flat";
+    }
+
+    function renderProducts(products) {
+      if (!products.length) {
+        app.className = "empty-state";
+        app.innerHTML = `<h2>No products tracked yet</h2><p>Run <code>npm run run-once</code> to capture your first snapshot.</p>`;
+        return;
+      }
+
+      app.className = "grid";
+      app.innerHTML = "";
+
+      products.forEach((product, idx) => {
+        const card = document.createElement("div");
+        card.className = "card";
+
+        const trend = product.trend;
+        const currency = product.currency;
+
+        let statsHtml = "";
+        if (trend) {
+          const sign = trend.changeAbsolute > 0 ? "+" : "";
+          statsHtml = `
+            <div class="stats">
+              <div class="stat">
+                <span class="stat-label">Initial</span>
+                <span class="stat-value">${formatCurrency(trend.initialPrice, currency)}</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">Current</span>
+                <span class="stat-value">${formatCurrency(trend.currentPrice, currency)}</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">Change</span>
+                <span class="stat-value ${trendClass(trend.direction)}">${sign}${formatCurrency(Math.abs(trend.changeAbsolute), currency)} (${sign}${trend.changePercent.toFixed(2)}%)</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">Trend</span>
+                <span class="stat-value ${trendClass(trend.direction)}">${trendLabel(trend.direction)}</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">Samples</span>
+                <span class="stat-value">${trend.sampleSize}</span>
+              </div>
+            </div>`;
+        } else {
+          statsHtml = `<div class="stats"><div class="stat"><span class="stat-label">Status</span><span class="stat-value" style="color:var(--text-muted)">No data yet</span></div></div>`;
+        }
+
+        const chartId = `chart-${idx}`;
+        const chartHtml = product.history.length >= 2
+          ? `<div class="chart-wrap"><canvas id="${chartId}"></canvas></div>`
+          : `<div class="no-data">${product.history.length === 1 ? "Need at least 2 snapshots to draw a chart" : "No price history"}</div>`;
+
+        card.innerHTML = `
+          <div class="card-header">
+            <h2>${product.name}</h2>
+            <span class="source">${product.source}</span>
+          </div>
+          ${statsHtml}
+          ${chartHtml}
+          <a class="product-link" href="${product.url}" target="_blank" rel="noopener">View product page &rarr;</a>
+        `;
+
+        app.appendChild(card);
+
+        if (product.history.length >= 2) {
+          const ctx = document.getElementById(chartId).getContext("2d");
+          const labels = product.history.map((h) => h.capturedAt);
+          const prices = product.history.map((h) => h.price);
+
+          const gradient = ctx.createLinearGradient(0, 0, 0, 220);
+          gradient.addColorStop(0, "rgba(108, 92, 231, 0.35)");
+          gradient.addColorStop(1, "rgba(108, 92, 231, 0.0)");
+
+          new Chart(ctx, {
+            type: "line",
+            data: {
+              labels,
+              datasets: [{
+                label: "Price",
+                data: prices,
+                borderColor: "#6c5ce7",
+                backgroundColor: gradient,
+                fill: true,
+                tension: 0.3,
+                pointRadius: 3,
+                pointBackgroundColor: "#6c5ce7",
+                pointBorderColor: "#1a1d27",
+                pointBorderWidth: 2,
+                pointHoverRadius: 6
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { intersect: false, mode: "index" },
+              scales: {
+                x: {
+                  type: "time",
+                  time: { tooltipFormat: "MMM d, yyyy h:mm a" },
+                  grid: { color: "rgba(255,255,255,0.04)" },
+                  ticks: { color: "#8b8fa3", maxTicksLimit: 8, font: { size: 11 } }
+                },
+                y: {
+                  grid: { color: "rgba(255,255,255,0.04)" },
+                  ticks: {
+                    color: "#8b8fa3",
+                    font: { size: 11 },
+                    callback: (v) => formatCurrency(v, currency)
+                  }
+                }
+              },
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  backgroundColor: "#1a1d27",
+                  borderColor: "#2a2d3a",
+                  borderWidth: 1,
+                  titleColor: "#e4e6ed",
+                  bodyColor: "#e4e6ed",
+                  padding: 10,
+                  callbacks: {
+                    label: (ctx) => formatCurrency(ctx.parsed.y, currency)
+                  }
+                }
+              }
+            }
+          });
+        }
+      });
+    }
+
+    fetch("/api/products")
+      .then((r) => r.json())
+      .then(renderProducts)
+      .catch((err) => {
+        app.className = "empty-state";
+        app.innerHTML = `<h2>Failed to load data</h2><p>${err.message}</p>`;
+      });
+  </script>
+</body>
+</html>

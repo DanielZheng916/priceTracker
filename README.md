@@ -80,6 +80,7 @@ Product schema:
 - `npm run run-once`: poll one time and exit
 - `npm run poll`: poll immediately and then on a recurring interval
 - `npm run report`: print initial/current/trend data
+- `npm run dashboard`: open a web UI at http://localhost:3000 with interactive price charts
 - `npm run test`: run unit tests
 
 ## Total Wine Bot Protection
